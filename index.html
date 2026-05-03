@@ -9,6 +9,10 @@
         :root {
             --bg: #0d0d0f; --accent: #6b1111; --text: #b0b0b0; --panel: #16161a; --border: #2a2a2e;
         }
+        
+        /* ВОТ ТА САМАЯ ПОТЕРЯННАЯ СТРОЧКА */
+        .hidden { display: none !important; }
+        
         body {
             font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text);
             margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
@@ -38,7 +42,7 @@
         }
 
         .opt-row { display: flex; align-items: center; gap: 10px; background: #1c1c21; padding: 8px; margin-bottom: 8px; border-radius: 6px; }
-        .preview-box { width: 100%; height: 150px; background: #09090b; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 10px 0; border-radius: 6px; }
+        .preview-box { width: 100%; height: 150px; background: #09090b; border: 1px dashed #333; display: flex; align-items: center; justify-content: center; overflow: hidden; margin: 10px 0; border-radius: 6px; cursor: pointer; }
         .preview-box img { max-width: 100%; max-height: 100%; object-fit: cover; }
 
         #player { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--border); padding: 10px; border-radius: 30px; display: flex; align-items: center; gap: 10px; z-index: 100; opacity: 0.7; }
@@ -52,7 +56,7 @@
 
 <div class="rain" id="rain"></div>
 <div id="player">
-    <span style="font-size: 10px;">♪</span>
+    <span style="font-size: 10px; color: var(--text);">♪</span>
     <input type="range" id="vol" min="0" max="1" step="0.01" value="0.2">
 </div>
 
@@ -89,13 +93,13 @@
                 <div class="grade-item">3: <input type="number" id="c3" value="50"></div>
                 <div class="grade-item">2: <input type="number" id="c2" value="0"></div>
             </div>
-            <button class="btn" style="background: #1a1a1e; border: 1px solid #333;" onclick="Core.make()">Готово (Ссылка)</button>
+            <button class="btn" style="background: #1a1a1e; border: 1px solid #333;" onclick="Core.make()">Готово (Создать ссылку)</button>
         </div>
     </div>
 
     <div id="scr-link" class="hidden">
         <h2>Ссылка готова</h2>
-        <div id="out" style="background: #09090b; padding: 15px; border: 1px solid #222; font-size: 11px; word-break: break-all; color: #666; border-radius: 6px;"></div>
+        <div id="out" style="background: #09090b; padding: 15px; border: 1px solid #222; font-size: 11px; word-break: break-all; color: #666; border-radius: 6px; max-height: 150px; overflow-y: auto;"></div>
         <button class="btn" onclick="Core.copy()">Скопировать</button>
     </div>
 
@@ -123,12 +127,13 @@ const Core = {
     init() { Sound.play(); UI.go('edit'); Ed.setType('multi'); },
     make() {
         if(document.getElementById('q-val').value) Ed.save();
+        if(this.qs.length === 0) return alert("Добавьте хотя бы один вопрос!");
         const obj = { q: this.qs, c: { 5: +document.getElementById('c5').value, 4: +document.getElementById('c4').value, 3: +document.getElementById('c3').value } };
         const s = LZString.compressToEncodedURIComponent(JSON.stringify(obj));
         document.getElementById('out').innerText = window.location.origin + window.location.pathname + '?d=' + s;
         UI.go('link');
     },
-    copy() { navigator.clipboard.writeText(document.getElementById('out').innerText); alert("Готово"); }
+    copy() { navigator.clipboard.writeText(document.getElementById('out').innerText); alert("Ссылка скопирована!"); }
 };
 
 const Ed = {
@@ -140,11 +145,11 @@ const Ed = {
         const w = document.getElementById('opts'); w.innerHTML = '';
         document.getElementById('add-o').style.display = t==='multi'?'block':'none';
         if(t==='multi') { this.addO(); this.addO(); }
-        else w.innerHTML = `<input type="text" id="ok-t" placeholder="Правильное слово">`;
+        else w.innerHTML = `<input type="text" id="ok-t" placeholder="Правильное слово (ответ)">`;
     },
     addO() {
         const d = document.createElement('div'); d.className = 'opt-row';
-        d.innerHTML = `<input type="checkbox" style="width:20px"><input type="text" class="ov" placeholder="Вариант">`;
+        d.innerHTML = `<input type="checkbox" style="width:20px; cursor:pointer;" title="Отметить как правильный"><input type="text" class="ov" placeholder="Вариант ответа">`;
         document.getElementById('opts').appendChild(d);
     },
     loadImg(el) {
@@ -155,13 +160,13 @@ const Ed = {
             tempImg.src = e.target.result;
             tempImg.onload = () => {
                 const canvas = document.createElement('canvas');
-                const max = 300; // Сжимаем до 300px для коротких ссылок
+                const max = 300; 
                 let w = tempImg.width, h = tempImg.height;
                 if(w > h) { if(w > max){ h *= max/w; w = max; } }
                 else { if(h > max){ w *= max/h; h = max; } }
                 canvas.width = w; canvas.height = h;
                 canvas.getContext('2d').drawImage(tempImg, 0, 0, w, h);
-                this.img = canvas.toDataURL('image/jpeg', 0.6); // Качество 60%
+                this.img = canvas.toDataURL('image/jpeg', 0.6); 
                 document.getElementById('p-img').src = this.img;
                 document.getElementById('p-img').classList.remove('hidden');
                 document.getElementById('p-hint').classList.add('hidden');
@@ -178,9 +183,11 @@ const Ed = {
                 const txt = r.querySelector('.ov').value;
                 if(txt) os.push({ txt, ok: r.querySelector('input').checked });
             });
-            if(os.length < 2) return; q.os = os;
+            if(os.length < 2) return alert("Нужно хотя бы 2 варианта ответа"); 
+            if(!os.some(o => o.ok)) return alert("Отметьте правильный ответ галочкой");
+            q.os = os;
         } else {
-            q.ok = document.getElementById('ok-t').value; if(!q.ok) return;
+            q.ok = document.getElementById('ok-t').value; if(!q.ok) return alert("Укажите правильный ответ");
         }
         Core.qs.push(q);
         this.img = null; document.getElementById('q-val').value = '';
@@ -197,12 +204,12 @@ const Quiz = {
         try {
             this.src = JSON.parse(LZString.decompressFromEncodedURIComponent(d));
             UI.go('quiz'); this.render();
-        } catch(e) { alert("Ошибка ссылки"); }
+        } catch(e) { alert("Ошибка чтения ссылки. Возможно, она скопирована не полностью."); }
     },
     render() {
         const q = this.src.q[this.idx];
         document.getElementById('qz-t').innerText = q.v;
-        document.getElementById('qz-img').innerHTML = q.i ? `<img src="${q.i}" style="width:100%; border-radius:8px; margin-bottom:15px;">` : '';
+        document.getElementById('qz-img').innerHTML = q.i ? `<img src="${q.i}" style="width:100%; border-radius:8px; margin-bottom:15px; border: 1px solid var(--border);">` : '';
         const o = document.getElementById('qz-o'); o.innerHTML = '';
         const i = document.getElementById('qz-in-wrap'); i.classList.add('hidden');
         if(q.t === 'multi') {
@@ -215,12 +222,17 @@ const Quiz = {
     },
     check(n, b) {
         const q = this.src.q[this.idx]; const ok = q.os[n].ok;
+        
+        // Блокируем остальные кнопки, чтобы не нажимали дважды
+        document.getElementById('qz-o').querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+        
         this.res.push({ q: q.v, ok, u: q.os[n].txt, r: q.os.find(x=>x.ok).txt });
         b.style.background = ok ? '#1e4d2b' : '#6b1111';
-        setTimeout(() => this.next(), 600);
+        setTimeout(() => this.next(), 800);
     },
     sendT() {
         const q = this.src.q[this.idx]; const v = document.getElementById('ans-in').value.trim();
+        if(!v) return;
         this.res.push({ q: q.v, ok: v.toLowerCase() === q.ok.toLowerCase(), u: v, r: q.ok });
         this.next();
     },
