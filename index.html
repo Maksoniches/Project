@@ -48,6 +48,12 @@
         
         .grade-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
         .grade-item { font-size: 11px; text-align: center; border: 1px solid var(--border); padding: 5px; border-radius: 4px; }
+        
+        /* Стили для скроллбара, чтобы было красиво */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
 <body>
@@ -78,7 +84,13 @@
         
         <input type="text" id="q-val" placeholder="Текст вопроса...">
         
-        <input type="text" id="q-img-url" placeholder="Ссылка на картинку из интернета (необязательно)" style="font-size: 12px; border-color: #444;">
+        <!-- Блок для картинок -->
+        <div style="background: #0d0d0f; border: 1px dashed var(--border); padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center;">
+            <img id="q-img-preview" class="hidden" style="max-width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 10px; border: 1px solid var(--accent); object-fit: contain;">
+            <p id="p-hint" style="font-size: 11px; color: #666; margin: 0;">Нажми <b>Ctrl+V</b>, чтобы вставить картинку из буфера</p>
+            <div style="font-size: 10px; color: #444; margin: 5px 0;">— или —</div>
+            <input type="text" id="q-img-url" placeholder="Ссылка на картинку из интернета" style="margin: 0; padding: 8px; font-size: 12px;">
+        </div>
 
         <div id="opts"></div>
         <button class="btn btn-sub" id="add-o" onclick="Ed.addO()">+ Добавить вариант</button>
@@ -100,6 +112,10 @@
         <p style="font-size: 12px; text-align: center; color: #888;">Скопируй ссылку или скачай файл, чтобы отправить его другу.</p>
         
         <div id="out" style="background: #09090b; padding: 15px; border: 1px solid #333; font-size: 11px; word-break: break-all; color: #666; border-radius: 4px; max-height: 80px; overflow-y: auto;"></div>
+        
+        <div id="link-warning" class="hidden" style="color: #eab308; font-size: 11px; text-align: center; margin-top: 10px; background: #422006; padding: 8px; border-radius: 4px;">
+            ⚠️ В тесте есть картинки. Ссылка получилась длинной и может не открыться в некоторых мессенджерах. Рекомендуем <b>Скачать файлом</b>.
+        </div>
         
         <button class="btn" onclick="Core.copy()">Скопировать ссылку</button>
         <button class="btn btn-sub" onclick="Core.downloadFile()" style="border: 1px dashed #555;">Скачать файлом (.sugar)</button>
@@ -126,9 +142,64 @@
 </div>
 
 <script>
+// Глобальный слушатель вставки картинок (Ctrl+V)
+document.addEventListener('paste', (e) => {
+    if (document.getElementById('scr-edit').classList.contains('hidden')) return;
+    
+    const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+    for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            const blob = item.getAsFile();
+            Core.processImageFile(blob);
+        }
+    }
+});
+
 const Core = {
-    qs: [], criteria: {}, finalDataStr: "",
+    qs: [], criteria: {}, finalDataStr: "", currentImgBase64: null,
+    
     init() { Sound.play(); UI.go('edit'); Ed.setType('multi'); },
+    
+    // Обработка загруженного файла .sugar
+    loadFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const data = e.target.result;
+            Quiz.start(data);
+        };
+        reader.readAsText(file);
+    },
+
+    // Обработка вставленной картинки (жмем размер)
+    processImageFile(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 400; // Оптимальный размер
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                
+                canvas.width = w; canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, w, h);
+                
+                this.currentImgBase64 = canvas.toDataURL('image/jpeg', 0.6); // Качество 60%
+                
+                const preview = document.getElementById('q-img-preview');
+                preview.src = this.currentImgBase64;
+                preview.classList.remove('hidden');
+                document.getElementById('p-hint').innerHTML = "Картинка добавлена! <br><span style='color:#aaa; font-size:9px;'>(вставь новую, чтобы заменить)</span>";
+            };
+        };
+        reader.readAsDataURL(file);
+    },
+
     make() {
         if(document.getElementById('q-val').value) Ed.save();
         if(this.qs.length === 0) return alert("Тест пустой. Добавьте вопросы.");
@@ -141,71 +212,30 @@ const Core = {
         const url = window.location.origin + window.location.pathname + '?d=' + this.finalDataStr;
         
         document.getElementById('out').innerText = url;
+        
+        // Показываем предупреждение, если ссылка слишком жирная (обычно браузеры режут после 2000-8000 символов)
+        if(this.finalDataStr.length > 3000) {
+            document.getElementById('link-warning').classList.remove('hidden');
+        } else {
+            document.getElementById('link-warning').classList.add('hidden');
+        }
+
         UI.go('link');
     },
+    
     copy() { 
         navigator.clipboard.writeText(document.getElementById('out').innerText); 
         alert("Ссылка скопирована!"); 
     },
+    
     downloadFile() {
-        // Создаем физический файл для скачивания
         const blob = new Blob([this.finalDataStr], { type: "text/plain" });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = "my_test.sugar";
+        a.download = "quiet_quiz.sugar";
         a.click();
-    },
-    // ОБНОВЛЕННАЯ ЗАГРУЗКА
-loadImg(el) {
-    const f = el.files[0]; if(!f) return;
-    
-    // 1. Создаем временную ссылку для предпросмотра (она не грузит систему)
-    const objectUrl = URL.createObjectURL(f);
-    const pImg = document.getElementById('p-img');
-    pImg.src = objectUrl;
-    pImg.classList.remove('hidden');
-    document.getElementById('p-hint').classList.add('hidden');
-
-    // 2. Сразу жмем картинку в фоне до 200px, чтобы ссылка была короткой
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const img = new Image();
-        img.src = e.target.result;
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const MAX_SIZE = 200; // Режем до минимума для выживания ссылки
-            let w = img.width, h = img.height;
-            if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
-            else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
-            canvas.width = w; canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, w, h);
-            
-            // Сохраняем очень легкий JPEG (качество 0.4)
-            this.img = canvas.toDataURL('image/jpeg', 0.4); 
-        };
-    };
-    reader.readAsDataURL(f);
-},
-
-// ОБНОВЛЕННОЕ СОХРАНЕНИЕ (Очистка мусора)
-save() {
-    const v = document.getElementById('q-val').value; if(!v) return;
-    const imgUrl = document.getElementById('q-img-url').value.trim();
-    
-    // Если есть и ссылка из инета, и файл — приоритет ссылке (она короче)
-    let finalImg = imgUrl || this.img;
-    
-    let q = { v, t: this.t, i: finalImg };
-    // ... остальная логика сохранения вариантов ...
-    Core.qs.push(q);
-
-    // ОЧИСТКА: чтобы рваные иконки не висели в памяти
-    if(this.img && this.img.startsWith('blob:')) URL.revokeObjectURL(this.img);
-    this.img = null;
-    document.getElementById('file').value = ''; // сброс инпута файла
-    // ... очистка интерфейса ...
-}
+        URL.revokeObjectURL(a.href);
+    }
 };
 
 const Ed = {
@@ -225,27 +255,38 @@ const Ed = {
         document.getElementById('opts').appendChild(d);
     },
     save() {
-        const v = document.getElementById('q-val').value; if(!v) return;
+        const v = document.getElementById('q-val').value.trim(); if(!v) return;
         const imgUrl = document.getElementById('q-img-url').value.trim();
         
-        let q = { v, t: this.t, i: imgUrl };
+        // Приоритет: ссылка из поля ввода, если пусто - вставленная картинка
+        let finalImg = imgUrl || Core.currentImgBase64;
+        
+        let q = { v, t: this.t, i: finalImg };
+        
         if(this.t === 'multi') {
             const os = [];
             document.querySelectorAll('.opt-row').forEach(r => {
-                const txt = r.querySelector('.ov').value;
+                const txt = r.querySelector('.ov').value.trim();
                 if(txt) os.push({ txt, ok: r.querySelector('input').checked });
             });
             if(os.length < 2) return alert("Укажите минимум 2 варианта ответа"); 
             if(!os.some(o => o.ok)) return alert("Нужно отметить галочкой правильный ответ");
             q.os = os;
         } else {
-            q.ok = document.getElementById('ok-t').value; if(!q.ok) return alert("Напишите правильный ответ");
+            q.ok = document.getElementById('ok-t').value.trim(); 
+            if(!q.ok) return alert("Напишите правильный ответ");
         }
         
         Core.qs.push(q);
-        // Очистка полей
+        
+        // Очистка полей для следующего вопроса
         document.getElementById('q-val').value = '';
         document.getElementById('q-img-url').value = '';
+        Core.currentImgBase64 = null;
+        document.getElementById('q-img-preview').src = '';
+        document.getElementById('q-img-preview').classList.add('hidden');
+        document.getElementById('p-hint').innerHTML = "Нажми <b>Ctrl+V</b>, чтобы вставить картинку из буфера";
+        
         document.getElementById('q-label').innerText = `Вопрос ${Core.qs.length + 1}`;
         this.setType(this.t);
     }
@@ -263,18 +304,23 @@ const Quiz = {
     render() {
         const q = this.src.q[this.idx];
         document.getElementById('qz-t').innerText = q.v;
-        // Если указана ссылка на картинку, показываем её
-        document.getElementById('qz-img').innerHTML = q.i ? `<img src="${q.i}" style="width:100%; max-height:250px; object-fit:cover; border-radius:4px; margin-bottom:15px; border: 1px solid var(--border);">` : '';
+        
+        // Отрисовка картинки, если она есть
+        document.getElementById('qz-img').innerHTML = q.i ? `<img src="${q.i}" style="width:100%; max-height:250px; object-fit:contain; border-radius:4px; margin-bottom:15px; border: 1px solid var(--border);">` : '';
         
         const o = document.getElementById('qz-o'); o.innerHTML = '';
         const i = document.getElementById('qz-in-wrap'); i.classList.add('hidden');
+        
         if(q.t === 'multi') {
             q.os.forEach((opt, n) => {
                 const b = document.createElement('button'); b.className = 'btn btn-sub';
                 b.innerText = opt.txt; b.onclick = () => this.check(n, b);
                 o.appendChild(b);
             });
-        } else { i.classList.remove('hidden'); document.getElementById('ans-in').value = ''; }
+        } else { 
+            i.classList.remove('hidden'); 
+            document.getElementById('ans-in').value = ''; 
+        }
     },
     check(n, b) {
         const q = this.src.q[this.idx]; const ok = q.os[n].ok;
