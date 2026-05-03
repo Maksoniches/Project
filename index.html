@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sugar Quiz Maker</title>
+    <title>Quiz Maker</title>
     <style>
         :root {
             --bg-black: #050505;
@@ -14,7 +14,7 @@
         }
 
         body {
-            font-family: 'Courier New', Courier, monospace;
+            font-family: sans-serif;
             background-color: var(--bg-black);
             background-image: radial-gradient(circle, #1a0000 0%, #050505 100%);
             color: var(--text-gray);
@@ -23,53 +23,45 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            overflow-x: hidden;
         }
 
         .container {
-            background: rgba(10, 10, 10, 0.9);
+            background: rgba(10, 10, 10, 0.95);
             padding: 2.5rem;
             border: 2px solid var(--blood-red);
-            border-radius: 5px;
-            box-shadow: 0 0 20px rgba(139, 0, 0, 0.5);
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(139, 0, 0, 0.4);
             width: 100%;
             max-width: 600px;
-            position: relative;
         }
 
-        h1, h2 { 
-            text-align: center; 
-            color: var(--bright-red); 
-            text-transform: uppercase; 
-            letter-spacing: 3px;
-            text-shadow: 2px 2px 5px black;
-        }
+        h1, h2 { text-align: center; color: var(--bright-red); letter-spacing: 1px; }
 
         .hidden { display: none; }
 
-        /* Элементы управления */
         .btn {
             background: var(--blood-red);
             color: white;
             border: 1px solid var(--bright-red);
-            padding: 12px;
+            padding: 14px;
             cursor: pointer;
             font-size: 1rem;
             width: 100%;
             margin-top: 10px;
-            font-family: inherit;
-            transition: all 0.3s;
+            border-radius: 5px;
+            transition: 0.3s;
         }
-        .btn:hover { background: var(--bright-red); box-shadow: 0 0 10px var(--bright-red); }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:hover { background: var(--bright-red); }
+        .btn:disabled { opacity: 0.5; }
 
         input[type="text"] {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
-            background: #1a1a1a;
+            background: #111;
             border: 1px solid var(--blood-red);
             color: white;
+            border-radius: 5px;
             outline: none;
         }
 
@@ -78,81 +70,67 @@
             align-items: center;
             gap: 10px;
             margin-bottom: 10px;
-            padding: 5px;
-            border-left: 3px solid var(--blood-red);
+            padding: 8px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 5px;
         }
 
-        /* Результаты */
-        .result-item {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-bottom: 1px solid #333;
-        }
-        .text-correct { color: var(--success-green); font-weight: bold; }
-        .text-wrong { color: var(--bright-red); font-weight: bold; }
+        .checkbox-custom { accent-color: var(--bright-red); width: 22px; height: 22px; cursor: pointer; }
 
-        .percentage {
-            font-size: 3rem;
-            text-align: center;
+        .result-item { margin-bottom: 15px; padding: 15px; border-bottom: 1px solid #222; }
+        .text-correct { color: var(--success-green); }
+        .text-wrong { color: var(--bright-red); }
+        .percentage { font-size: 3.5rem; text-align: center; color: var(--bright-red); margin: 20px 0; font-weight: bold; }
+        
+        #link-output { 
+            word-break: break-all; 
+            background: #000; 
+            padding: 15px; 
+            border: 1px dashed var(--blood-red); 
             color: var(--bright-red);
-            margin: 20px 0;
-        }
-
-        /* Кастомный чекбокс */
-        .checkbox-custom { accent-color: var(--bright-red); width: 20px; height: 20px; }
-
-        #audio-controls {
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            opacity: 0.5;
+            margin: 15px 0;
         }
     </style>
 </head>
 <body>
 
 <div class="container" id="app">
-    <!-- Скрытый аудиоплеер с твоим файлом -->
-<audio id="bg-music" loop>
-    <source src="silent_hill_3_Akira Yamaoka - End of Small Sanctuary.mp3" type="audio/mpeg">
-</audio>
+    <!-- Музыка теперь ссылается на song.mp3 -->
+    <audio id="bg-music" loop>
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
 
-    <!-- Приветственный экран (только если нет данных в URL) -->
     <div id="screen-welcome">
-        <h1>Sugar Quiz</h1>
-        <button class="btn" onclick="startApp()">Войти в систему</button>
+        <h1>Конструктор тестов</h1>
+        <button class="btn" onclick="startApp()">Начать работу</button>
     </div>
 
-    <!-- Редактор -->
     <div id="screen-editor" class="hidden">
         <h2 id="q-counter">Вопрос №1</h2>
-        <input type="text" id="q-text" placeholder="ТЕКСТ ВОПРОСА...">
+        <input type="text" id="q-text" placeholder="Введите ваш вопрос">
         <div id="options-container"></div>
-        <button class="btn" onclick="addOptionField()">+ ДОБАВИТЬ ВАРИАНТ</button>
-        <button class="btn" onclick="saveQuestion()">СЛЕДУЮЩИЙ ВОПРОС</button>
-        <button class="btn" style="margin-top: 40px; border-style: dashed;" onclick="finishQuiz()">СОЗДАТЬ ТЕСТ</button>
+        <button class="btn" onclick="addOptionField()">+ Добавить вариант</button>
+        <button class="btn" onclick="saveQuestion()">Следующий вопрос</button>
+        <button class="btn" style="margin-top: 30px; background: #333;" onclick="finishQuiz()">Завершить и создать ссылку</button>
     </div>
 
-    <!-- Экран ссылки -->
     <div id="screen-link" class="hidden">
-        <h2>ТЕСТ СФОРМИРОВАН</h2>
-        <p style="text-align: center;">Пусти это по венам (скопируй ссылку):</p>
-        <div id="link-output" style="word-break: break-all; background: #111; padding: 10px; border: 1px solid var(--blood-red); color: var(--bright-red);"></div>
-        <button class="btn" onclick="copyLink()">КОПИРОВАТЬ ССЫЛКУ</button>
+        <h2>Ссылка готова</h2>
+        <div id="link-output"></div>
+        <button class="btn" onclick="copyLink()">Копировать в буфер</button>
+        <button class="btn" style="background: #111;" onclick="location.href=location.pathname">Создать еще один</button>
     </div>
 
-    <!-- Прохождение теста -->
     <div id="screen-quiz" class="hidden">
         <h2 id="display-q-text"></h2>
         <div id="display-options"></div>
     </div>
 
-    <!-- Итоговый отчет -->
     <div id="screen-result" class="hidden">
-        <h1>АНАЛИЗ КРОВИ</h1>
+        <h1>Результаты теста</h1>
         <div class="percentage" id="perc-output">0%</div>
         <div id="error-list"></div>
-        <button class="btn" onclick="location.href=location.pathname">НОВЫЙ ТЕСТ</button>
+        <button class="btn" onclick="location.href=location.pathname">Создать свой тест</button>
     </div>
 </div>
 
@@ -166,17 +144,16 @@
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('data')) {
-            // Если есть данные, убираем приветствие и сразу запускаем тест
             document.getElementById('screen-welcome').classList.add('hidden');
             try {
                 currentQuizData = JSON.parse(decodeURIComponent(escape(atob(urlParams.get('data')))));
                 startQuiz();
-            } catch (e) { alert("Ошибка данных"); }
+            } catch (e) { alert("Ошибка при чтении данных теста"); }
         }
     };
 
     function startApp() {
-        music.play().catch(() => console.log("Музыка ждет взаимодействия"));
+        music.play().catch(() => {});
         showScreen('editor');
     }
 
@@ -191,10 +168,11 @@
     function addOptionField() {
         const div = document.createElement('div');
         div.className = 'option-row';
-        div.innerHTML = `<input type="checkbox" class="checkbox-custom"><input type="text" class="opt-text" placeholder="Ответ...">`;
+        div.innerHTML = `<input type="checkbox" class="checkbox-custom"><input type="text" class="opt-text" placeholder="Вариант ответа">`;
         document.getElementById('options-container').appendChild(div);
     }
 
+    // ИСПРАВЛЕННАЯ ЛОГИКА СОХРАНЕНИЯ
     function saveQuestion() {
         const qText = document.getElementById('q-text').value;
         const rows = document.querySelectorAll('.option-row');
@@ -210,10 +188,18 @@
             }
         });
 
-        if (!qText || opts.length < 2) return alert("Нужен вопрос и минимум 2 ответа!");
-        if (!hasCorrect) return alert("ОТМЕТЬ ХОТЯ БЫ ОДИН ПРАВИЛЬНЫЙ ОТВЕТ ГАЛОЧКОЙ!");
+        if (!qText || opts.length < 2) {
+            alert("Пожалуйста, введите вопрос и хотя бы два варианта ответа.");
+            return;
+        }
+        if (!hasCorrect) {
+            alert("Нужно отметить галочкой хотя бы один правильный ответ!");
+            return; // Теперь он не пропустит дальше
+        }
 
         questions.push({ qText, opts });
+        
+        // Очистка полей
         document.getElementById('q-text').value = '';
         document.getElementById('options-container').innerHTML = '';
         addOptionField(); addOptionField();
@@ -221,8 +207,25 @@
     }
 
     function finishQuiz() {
-        if (document.getElementById('q-text').value) saveQuestion();
-        if (!questions.length) return;
+        const qText = document.getElementById('q-text').value;
+        // Если в поле что-то введено, пытаемся сохранить последний вопрос
+        if (qText) {
+            const rows = document.querySelectorAll('.option-row');
+            let hasCorrect = false;
+            rows.forEach(row => { if(row.querySelector('.checkbox-custom').checked) hasCorrect = true; });
+            
+            if (!hasCorrect) {
+                alert("В последнем вопросе не отмечен правильный ответ!");
+                return;
+            }
+            saveQuestion();
+        }
+        
+        if (!questions.length) {
+            alert("Вы не добавили ни одного вопроса.");
+            return;
+        }
+
         const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(questions))));
         const link = window.location.origin + window.location.pathname + '?data=' + base64;
         document.getElementById('link-output').innerText = link;
@@ -245,6 +248,7 @@
             const btn = document.createElement('button');
             btn.className = 'btn';
             btn.style.background = '#111';
+            btn.style.textAlign = 'left';
             btn.innerText = opt.text;
             btn.onclick = () => handleAnswer(index, btn);
             container.appendChild(btn);
@@ -265,13 +269,13 @@
         });
 
         btn.style.backgroundColor = isCorrect ? '#22c55e' : '#ff0000';
-        btn.style.boxShadow = isCorrect ? '0 0 15px #22c55e' : '0 0 15px #ff0000';
+        btn.style.borderColor = isCorrect ? '#22c55e' : '#ff0000';
 
         setTimeout(() => {
             currentStep++;
             if (currentStep < currentQuizData.length) renderStep();
             else showFinalResult();
-        }, 1000);
+        }, 800);
     }
 
     function showFinalResult() {
@@ -281,22 +285,22 @@
         document.getElementById('perc-output').innerText = percent + '%';
 
         const list = document.getElementById('error-list');
-        list.innerHTML = '<h3>ДЕТАЛИЗАЦИЯ:</h3>';
+        list.innerHTML = '<h3>Детали теста:</h3>';
         userAnswers.forEach(a => {
             list.innerHTML += `
                 <div class="result-item">
                     <div><b>Вопрос:</b> ${a.question}</div>
                     <div class="${a.wasRight ? 'text-correct' : 'text-wrong'}">
-                        <b>Твой ответ:</b> ${a.userChoice}
+                        <b>Ваш ответ:</b> ${a.userChoice}
                     </div>
-                    ${!a.wasRight ? `<div class="text-correct"><b>Верно:</b> ${a.correctChoice}</div>` : ''}
+                    ${!a.wasRight ? `<div class="text-correct"><b>Правильно:</b> ${a.correctChoice}</div>` : ''}
                 </div>`;
         });
     }
 
     function copyLink() {
-        navigator.clipboard.writeText(document.getElementById('link-output').innerText);
-        alert("Ссылка в буфере");
+        const text = document.getElementById('link-output').innerText;
+        navigator.clipboard.writeText(text).then(() => alert("Ссылка скопирована!"));
     }
 </script>
 
