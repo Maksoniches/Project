@@ -155,12 +155,23 @@ const Core = {
         a.download = "my_test.sugar";
         a.click();
     },
-    loadFile(el) {
-        const file = el.files[0]; if(!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => Quiz.start(e.target.result);
-        reader.readAsText(file);
-    }
+    loadImg(el) {
+        const f = el.files[0];
+        if(!f) return;
+        
+        // Создаем временную ссылку для предпросмотра, которая не забивает память
+        const objectUrl = URL.createObjectURL(f);
+        const pImg = document.getElementById('p-img');
+        const pHint = document.getElementById('p-hint');
+        
+        pImg.src = objectUrl;
+        pImg.classList.remove('hidden');
+        pHint.classList.add('hidden');
+        
+        // Важно: картинка не копируется в ссылку, 
+        // пока ты не нажмешь "Сохранить вопрос"
+        this.img = objectUrl; 
+    },
 };
 
 const Ed = {
