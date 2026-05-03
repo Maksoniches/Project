@@ -155,23 +155,57 @@ const Core = {
         a.download = "my_test.sugar";
         a.click();
     },
-    loadImg(el) {
-        const f = el.files[0];
-        if(!f) return;
-        
-        // Создаем временную ссылку для предпросмотра, которая не забивает память
-        const objectUrl = URL.createObjectURL(f);
-        const pImg = document.getElementById('p-img');
-        const pHint = document.getElementById('p-hint');
-        
-        pImg.src = objectUrl;
-        pImg.classList.remove('hidden');
-        pHint.classList.add('hidden');
-        
-        // Важно: картинка не копируется в ссылку, 
-        // пока ты не нажмешь "Сохранить вопрос"
-        this.img = objectUrl; 
-    },
+    // ОБНОВЛЕННАЯ ЗАГРУЗКА
+loadImg(el) {
+    const f = el.files[0]; if(!f) return;
+    
+    // 1. Создаем временную ссылку для предпросмотра (она не грузит систему)
+    const objectUrl = URL.createObjectURL(f);
+    const pImg = document.getElementById('p-img');
+    pImg.src = objectUrl;
+    pImg.classList.remove('hidden');
+    document.getElementById('p-hint').classList.add('hidden');
+
+    // 2. Сразу жмем картинку в фоне до 200px, чтобы ссылка была короткой
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target.result;
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_SIZE = 200; // Режем до минимума для выживания ссылки
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+            else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+            canvas.width = w; canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            
+            // Сохраняем очень легкий JPEG (качество 0.4)
+            this.img = canvas.toDataURL('image/jpeg', 0.4); 
+        };
+    };
+    reader.readAsDataURL(f);
+},
+
+// ОБНОВЛЕННОЕ СОХРАНЕНИЕ (Очистка мусора)
+save() {
+    const v = document.getElementById('q-val').value; if(!v) return;
+    const imgUrl = document.getElementById('q-img-url').value.trim();
+    
+    // Если есть и ссылка из инета, и файл — приоритет ссылке (она короче)
+    let finalImg = imgUrl || this.img;
+    
+    let q = { v, t: this.t, i: finalImg };
+    // ... остальная логика сохранения вариантов ...
+    Core.qs.push(q);
+
+    // ОЧИСТКА: чтобы рваные иконки не висели в памяти
+    if(this.img && this.img.startsWith('blob:')) URL.revokeObjectURL(this.img);
+    this.img = null;
+    document.getElementById('file').value = ''; // сброс инпута файла
+    // ... очистка интерфейса ...
+}
 };
 
 const Ed = {
