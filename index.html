@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Конструктор тестов</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        .hidden { display: none; }
+        input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        button { padding: 10px 20px; cursor: pointer; background: #2ea44f; color: white; border: none; border-radius: 5px; margin-top: 10px; }
+        .question-block { border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <div id="creator">
+        <h2>Создание теста</h2>
+        <input type="text" id="qInput" placeholder="Введите вопрос">
+        <input type="text" id="aInput" placeholder="Варианты через запятую (например: Да, Нет, Не знаю)">
+        <button onclick="addQuestion()">Добавить вопрос</button>
+        <hr>
+        <div id="preview"></div>
+        <button id="startBtn" class="hidden" onclick="startTest()">Начать тест</button>
+    </div>
+
+    <div id="quiz" class="hidden">
+        <h2>Прохождение теста</h2>
+        <div id="quizContent"></div>
+        <button onclick="location.reload()">Создать новый тест</button>
+    </div>
+
+    <script>
+        let questions = [];
+
+        function addQuestion() {
+            const q = document.getElementById('qInput').value;
+            const a = document.getElementById('aInput').value.split(',');
+
+            if (q && a.length > 1) {
+                questions.push({ question: q, answers: a });
+                document.getElementById('preview').innerHTML += `<div class="question-block"><b>${q}</b> (${a.join(', ')})</div>`;
+                document.getElementById('qInput').value = '';
+                document.getElementById('aInput').value = '';
+                document.getElementById('startBtn').classList.remove('hidden');
+            } else {
+                alert("Введите вопрос и хотя бы два варианта ответа через запятую");
+            }
+        }
+
+        function startTest() {
+            document.getElementById('creator').classList.add('hidden');
+            document.getElementById('quiz').classList.remove('hidden');
+            
+            const container = document.getElementById('quizContent');
+            questions.forEach((item, index) => {
+                let html = `<div class="question-block"><p>${index + 1}. ${item.question}</p>`;
+                item.answers.forEach(ans => {
+                    html += `<label><input type="radio" name="q${index}"> ${ans.trim()}</label><br>`;
+                });
+                html += `</div>`;
+                container.innerHTML += html;
+            });
+        }
+    </script>
+</body>
+</html>
