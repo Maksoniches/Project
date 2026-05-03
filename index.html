@@ -31,12 +31,11 @@
             border: 2px solid var(--blood-red);
             border-radius: 10px;
             box-shadow: 0 0 30px rgba(139, 0, 0, 0.4);
-            width: 100%;
+            width: 90%;
             max-width: 600px;
         }
 
-        h1, h2 { text-align: center; color: var(--bright-red); letter-spacing: 1px; }
-
+        h1, h2 { text-align: center; color: var(--bright-red); margin-bottom: 20px; }
         .hidden { display: none; }
 
         .btn {
@@ -52,7 +51,6 @@
             transition: 0.3s;
         }
         .btn:hover { background: var(--bright-red); }
-        .btn:disabled { opacity: 0.5; }
 
         input[type="text"] {
             width: 100%;
@@ -63,6 +61,7 @@
             color: white;
             border-radius: 5px;
             outline: none;
+            box-sizing: border-box;
         }
 
         .option-row {
@@ -77,6 +76,7 @@
 
         .checkbox-custom { accent-color: var(--bright-red); width: 22px; height: 22px; cursor: pointer; }
 
+        /* Итоговый экран */
         .result-item { margin-bottom: 15px; padding: 15px; border-bottom: 1px solid #222; }
         .text-correct { color: var(--success-green); }
         .text-wrong { color: var(--bright-red); }
@@ -89,36 +89,58 @@
             border: 1px dashed var(--blood-red); 
             color: var(--bright-red);
             margin: 15px 0;
+            font-family: monospace;
         }
+
+        /* Мини-плеер */
+        #audio-player {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid var(--blood-red);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 100;
+        }
+        #audio-player span { font-size: 12px; color: var(--bright-red); }
+        #volume-slider { cursor: pointer; accent-color: var(--bright-red); }
     </style>
 </head>
 <body>
 
+<div id="audio-player">
+    <span>SH3 OST</span>
+    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.2">
+</div>
+
 <div class="container" id="app">
-    <!-- Музыка теперь ссылается на song.mp3 -->
     <audio id="bg-music" loop>
         <source src="song.mp3" type="audio/mpeg">
     </audio>
 
     <div id="screen-welcome">
         <h1>Конструктор тестов</h1>
-        <button class="btn" onclick="startApp()">Начать работу</button>
+        <button class="btn" onclick="startApp()">Начать</button>
     </div>
 
     <div id="screen-editor" class="hidden">
         <h2 id="q-counter">Вопрос №1</h2>
-        <input type="text" id="q-text" placeholder="Введите ваш вопрос">
+        <input type="text" id="q-text" placeholder="Введите вопрос">
         <div id="options-container"></div>
-        <button class="btn" onclick="addOptionField()">+ Добавить вариант</button>
-        <button class="btn" onclick="saveQuestion()">Следующий вопрос</button>
-        <button class="btn" style="margin-top: 30px; background: #333;" onclick="finishQuiz()">Завершить и создать ссылку</button>
+        <button class="btn" onclick="addOptionField()">+ Вариант ответа</button>
+        <button class="btn" onclick="saveQuestion()">Далее</button>
+        <button class="btn" style="margin-top: 30px; background: #333;" onclick="finishQuiz()">Создать ссылку</button>
     </div>
 
     <div id="screen-link" class="hidden">
-        <h2>Ссылка готова</h2>
+        <h2>Ссылка создана</h2>
         <div id="link-output"></div>
-        <button class="btn" onclick="copyLink()">Копировать в буфер</button>
-        <button class="btn" style="background: #111;" onclick="location.href=location.pathname">Создать еще один</button>
+        <button class="btn" onclick="copyLink()">Копировать ссылку</button>
+        <button class="btn" style="background: #111;" onclick="location.href=location.pathname">На главную</button>
     </div>
 
     <div id="screen-quiz" class="hidden">
@@ -127,7 +149,7 @@
     </div>
 
     <div id="screen-result" class="hidden">
-        <h1>Результаты теста</h1>
+        <h1>Итоги</h1>
         <div class="percentage" id="perc-output">0%</div>
         <div id="error-list"></div>
         <button class="btn" onclick="location.href=location.pathname">Создать свой тест</button>
@@ -139,16 +161,40 @@
     let currentQuizData = [];
     let userAnswers = [];
     let currentStep = 0;
+    
     const music = document.getElementById('bg-music');
+    const volumeSlider = document.getElementById('volume-slider');
+
+    // Настройка звука
+    music.volume = 0.2;
+    volumeSlider.addEventListener('input', (e) => {
+        music.volume = e.target.value;
+    });
+
+    // Корректное кодирование кириллицы для URL
+    function encodeData(obj) {
+        return btoa(encodeURIComponent(JSON.stringify(obj)).replace(/%([0-9A-F]{2})/g, (match, p1) => {
+            return String.fromCharCode('0x' + p1);
+        }));
+    }
+
+    function decodeData(str) {
+        return JSON.parse(decodeURIComponent(atob(str).split('').map((c) => {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join('')));
+    }
 
     window.onload = () => {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('data')) {
             document.getElementById('screen-welcome').classList.add('hidden');
             try {
-                currentQuizData = JSON.parse(decodeURIComponent(escape(atob(urlParams.get('data')))));
+                currentQuizData = decodeData(urlParams.get('data'));
                 startQuiz();
-            } catch (e) { alert("Ошибка при чтении данных теста"); }
+            } catch (e) {
+                alert("Ошибка чтения данных. Ссылка повреждена.");
+                console.error(e);
+            }
         }
     };
 
@@ -172,7 +218,6 @@
         document.getElementById('options-container').appendChild(div);
     }
 
-    // ИСПРАВЛЕННАЯ ЛОГИКА СОХРАНЕНИЯ
     function saveQuestion() {
         const qText = document.getElementById('q-text').value;
         const rows = document.querySelectorAll('.option-row');
@@ -188,18 +233,10 @@
             }
         });
 
-        if (!qText || opts.length < 2) {
-            alert("Пожалуйста, введите вопрос и хотя бы два варианта ответа.");
-            return;
-        }
-        if (!hasCorrect) {
-            alert("Нужно отметить галочкой хотя бы один правильный ответ!");
-            return; // Теперь он не пропустит дальше
-        }
+        if (!qText || opts.length < 2) return alert("Введите вопрос и минимум 2 ответа");
+        if (!hasCorrect) return alert("Выберите правильный ответ!");
 
         questions.push({ qText, opts });
-        
-        // Очистка полей
         document.getElementById('q-text').value = '';
         document.getElementById('options-container').innerHTML = '';
         addOptionField(); addOptionField();
@@ -207,27 +244,17 @@
     }
 
     function finishQuiz() {
-        const qText = document.getElementById('q-text').value;
-        // Если в поле что-то введено, пытаемся сохранить последний вопрос
-        if (qText) {
+        if (document.getElementById('q-text').value) {
             const rows = document.querySelectorAll('.option-row');
             let hasCorrect = false;
             rows.forEach(row => { if(row.querySelector('.checkbox-custom').checked) hasCorrect = true; });
-            
-            if (!hasCorrect) {
-                alert("В последнем вопросе не отмечен правильный ответ!");
-                return;
-            }
+            if (!hasCorrect) return alert("В последнем вопросе не выбран правильный ответ!");
             saveQuestion();
         }
         
-        if (!questions.length) {
-            alert("Вы не добавили ни одного вопроса.");
-            return;
-        }
+        if (!questions.length) return alert("Добавьте хотя бы один вопрос");
 
-        const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(questions))));
-        const link = window.location.origin + window.location.pathname + '?data=' + base64;
+        const link = window.location.origin + window.location.pathname + '?data=' + encodeData(questions);
         document.getElementById('link-output').innerText = link;
         showScreen('link');
     }
@@ -248,7 +275,6 @@
             const btn = document.createElement('button');
             btn.className = 'btn';
             btn.style.background = '#111';
-            btn.style.textAlign = 'left';
             btn.innerText = opt.text;
             btn.onclick = () => handleAnswer(index, btn);
             container.appendChild(btn);
@@ -269,7 +295,6 @@
         });
 
         btn.style.backgroundColor = isCorrect ? '#22c55e' : '#ff0000';
-        btn.style.borderColor = isCorrect ? '#22c55e' : '#ff0000';
 
         setTimeout(() => {
             currentStep++;
@@ -285,7 +310,7 @@
         document.getElementById('perc-output').innerText = percent + '%';
 
         const list = document.getElementById('error-list');
-        list.innerHTML = '<h3>Детали теста:</h3>';
+        list.innerHTML = '<h3>Детали:</h3>';
         userAnswers.forEach(a => {
             list.innerHTML += `
                 <div class="result-item">
@@ -293,14 +318,14 @@
                     <div class="${a.wasRight ? 'text-correct' : 'text-wrong'}">
                         <b>Ваш ответ:</b> ${a.userChoice}
                     </div>
-                    ${!a.wasRight ? `<div class="text-correct"><b>Правильно:</b> ${a.correctChoice}</div>` : ''}
+                    ${!a.wasRight ? `<div class="text-correct"><b>Верно:</b> ${a.correctChoice}</div>` : ''}
                 </div>`;
         });
     }
 
     function copyLink() {
-        const text = document.getElementById('link-output').innerText;
-        navigator.clipboard.writeText(text).then(() => alert("Ссылка скопирована!"));
+        navigator.clipboard.writeText(document.getElementById('link-output').innerText);
+        alert("Скопировано!");
     }
 </script>
 
