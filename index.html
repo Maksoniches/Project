@@ -6,22 +6,55 @@
     <title>Quiet Quiz Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
-        :root { --bg: #0d0d0f; --accent: #6b1111; --text: #b0b0b0; --panel: #16161a; --border: #2a2a2e; }
+        :root { --accent: #6b1111; --text: #b0b0b0; --panel: #16161a; --border: #2a2a2e; }
         
         /* Железно прячем экраны */
         .hidden { display: none !important; }
         
         body {
-            font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text);
+            font-family: 'Segoe UI', Roboto, sans-serif; color: var(--text);
             margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden;
+            /* Активный градиент волной */
+            background: linear-gradient(135deg, #050505, #2d0a0a, #0a0a0c, #1f0707);
+            background-size: 300% 300%;
+            animation: gradientWave 12s ease infinite;
+        }
+
+        @keyframes gradientWave {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
         
-        .rain { position: fixed; inset: 0; pointer-events: none; z-index: 1; opacity: 0.3; }
-        .drop { position: absolute; background: #fff; width: 1px; height: 30px; top: -50px; animation: fall linear infinite; }
-        @keyframes fall { to { transform: translateY(110vh); } }
+        /* Подпись автора */
+        .author-tag {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.3);
+            z-index: 100;
+            letter-spacing: 1px;
+            font-weight: 300;
+            pointer-events: none;
+        }
+
+        /* Падающие вопросы */
+        .rain { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+        .drop { 
+            position: absolute; 
+            top: -50px; 
+            color: rgba(255, 255, 255, 0.15); 
+            font-family: 'Georgia', serif; /* Засечки красиво смотрятся для вопросов */
+            animation: fall linear infinite; 
+            user-select: none;
+        }
+        @keyframes fall { to { transform: translateY(110vh) rotate(15deg); } }
 
         .container {
-            background: var(--panel); padding: 30px; border-radius: 8px; border: 1px solid var(--border);
+            background: rgba(22, 22, 26, 0.85); /* Сделал панель чуть прозрачной для эффекта */
+            backdrop-filter: blur(10px);
+            padding: 30px; border-radius: 8px; border: 1px solid var(--border);
             width: 90%; max-width: 500px; position: relative; z-index: 10; box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             max-height: 85vh; overflow-y: auto;
         }
@@ -33,32 +66,33 @@
             width: 100%; border-radius: 4px; transition: 0.2s; margin-top: 10px; font-size: 0.9rem;
         }
         .btn:hover { filter: brightness(1.2); }
-        .btn-sub { background: #2a2a2e; color: #aaa; margin-top: 5px; }
+        .btn-sub { background: rgba(42, 42, 46, 0.8); color: #aaa; margin-top: 5px; }
 
         input {
-            width: 100%; padding: 12px; margin: 10px 0; background: #09090b;
+            width: 100%; padding: 12px; margin: 10px 0; background: rgba(9, 9, 11, 0.8);
             border: 1px solid var(--border); color: #fff; border-radius: 4px; box-sizing: border-box;
         }
 
-        .opt-row { display: flex; align-items: center; gap: 10px; background: #1c1c21; padding: 8px; margin-bottom: 8px; border-radius: 4px; }
+        .opt-row { display: flex; align-items: center; gap: 10px; background: rgba(28, 28, 33, 0.8); padding: 8px; margin-bottom: 8px; border-radius: 4px; }
 
-        #player { position: fixed; bottom: 20px; right: 20px; background: var(--panel); border: 1px solid var(--border); padding: 10px; border-radius: 30px; display: flex; align-items: center; gap: 10px; z-index: 100; opacity: 0.5; transition: 0.3s; }
+        #player { position: fixed; bottom: 20px; right: 20px; background: rgba(22, 22, 26, 0.8); backdrop-filter: blur(5px); border: 1px solid var(--border); padding: 10px; border-radius: 30px; display: flex; align-items: center; gap: 10px; z-index: 100; opacity: 0.5; transition: 0.3s; }
         #player:hover { opacity: 1; }
         input[type="range"] { width: 60px; accent-color: var(--accent); margin: 0; }
         
         .grade-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
         .grade-item { font-size: 11px; text-align: center; border: 1px solid var(--border); padding: 5px; border-radius: 4px; }
         
-        /* Стили для скроллбара, чтобы было красиво */
         ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #444; }
     </style>
 </head>
 <body>
 
+<div class="author-tag">by Максим Терентьев</div>
 <div class="rain" id="rain"></div>
+
 <div id="player">
     <span style="font-size: 10px; color: var(--text);">AUDIO</span>
     <input type="range" id="vol" min="0" max="1" step="0.01" value="0.2">
@@ -85,11 +119,11 @@
         <input type="text" id="q-val" placeholder="Текст вопроса...">
         
         <!-- Блок для картинок -->
-        <div style="background: #0d0d0f; border: 1px dashed var(--border); padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center;">
+        <div style="background: rgba(13, 13, 15, 0.6); border: 1px dashed var(--border); padding: 10px; border-radius: 4px; margin: 10px 0; text-align: center;">
             <img id="q-img-preview" class="hidden" style="max-width: 100%; max-height: 150px; border-radius: 4px; margin-bottom: 10px; border: 1px solid var(--accent); object-fit: contain;">
             <p id="p-hint" style="font-size: 11px; color: #666; margin: 0;">Нажми <b>Ctrl+V</b>, чтобы вставить картинку из буфера</p>
             <div style="font-size: 10px; color: #444; margin: 5px 0;">— или —</div>
-            <input type="text" id="q-img-url" placeholder="Ссылка на картинку из интернета" style="margin: 0; padding: 8px; font-size: 12px;">
+            <input type="text" id="q-img-url" placeholder="Ссылка на картинку из интернета" style="margin: 0; padding: 8px; font-size: 12px; background: rgba(9, 9, 11, 0.8);">
         </div>
 
         <div id="opts"></div>
@@ -111,9 +145,9 @@
         <h2>Тест создан</h2>
         <p style="font-size: 12px; text-align: center; color: #888;">Скопируй ссылку или скачай файл, чтобы отправить его другу.</p>
         
-        <div id="out" style="background: #09090b; padding: 15px; border: 1px solid #333; font-size: 11px; word-break: break-all; color: #666; border-radius: 4px; max-height: 80px; overflow-y: auto;"></div>
+        <div id="out" style="background: rgba(9, 9, 11, 0.8); padding: 15px; border: 1px solid #333; font-size: 11px; word-break: break-all; color: #666; border-radius: 4px; max-height: 80px; overflow-y: auto;"></div>
         
-        <div id="link-warning" class="hidden" style="color: #eab308; font-size: 11px; text-align: center; margin-top: 10px; background: #422006; padding: 8px; border-radius: 4px;">
+        <div id="link-warning" class="hidden" style="color: #eab308; font-size: 11px; text-align: center; margin-top: 10px; background: rgba(66, 32, 6, 0.8); padding: 8px; border-radius: 4px;">
             ⚠️ В тесте есть картинки. Ссылка получилась длинной и может не открыться в некоторых мессенджерах. Рекомендуем <b>Скачать файлом</b>.
         </div>
         
@@ -142,10 +176,9 @@
 </div>
 
 <script>
-// Глобальный слушатель вставки картинок (Ctrl+V)
+// Вставка картинок по Ctrl+V
 document.addEventListener('paste', (e) => {
     if (document.getElementById('scr-edit').classList.contains('hidden')) return;
-    
     const items = (e.clipboardData || e.originalEvent.clipboardData).items;
     for (const item of items) {
         if (item.type.indexOf('image') !== -1) {
@@ -160,7 +193,6 @@ const Core = {
     
     init() { Sound.play(); UI.go('edit'); Ed.setType('multi'); },
     
-    // Обработка загруженного файла .sugar
     loadFile(input) {
         const file = input.files[0];
         if (!file) return;
@@ -172,7 +204,6 @@ const Core = {
         reader.readAsText(file);
     },
 
-    // Обработка вставленной картинки (жмем размер)
     processImageFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -180,7 +211,7 @@ const Core = {
             img.src = e.target.result;
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                const MAX_SIZE = 400; // Оптимальный размер
+                const MAX_SIZE = 400;
                 let w = img.width, h = img.height;
                 if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
                 else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
@@ -189,7 +220,7 @@ const Core = {
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
                 
-                this.currentImgBase64 = canvas.toDataURL('image/jpeg', 0.6); // Качество 60%
+                this.currentImgBase64 = canvas.toDataURL('image/jpeg', 0.6);
                 
                 const preview = document.getElementById('q-img-preview');
                 preview.src = this.currentImgBase64;
@@ -207,13 +238,11 @@ const Core = {
         this.criteria = { 5: +document.getElementById('c5').value, 4: +document.getElementById('c4').value, 3: +document.getElementById('c3').value };
         const obj = { q: this.qs, c: this.criteria };
         
-        // Сжимаем данные
         this.finalDataStr = LZString.compressToEncodedURIComponent(JSON.stringify(obj));
         const url = window.location.origin + window.location.pathname + '?d=' + this.finalDataStr;
         
         document.getElementById('out').innerText = url;
         
-        // Показываем предупреждение, если ссылка слишком жирная (обычно браузеры режут после 2000-8000 символов)
         if(this.finalDataStr.length > 3000) {
             document.getElementById('link-warning').classList.remove('hidden');
         } else {
@@ -258,9 +287,7 @@ const Ed = {
         const v = document.getElementById('q-val').value.trim(); if(!v) return;
         const imgUrl = document.getElementById('q-img-url').value.trim();
         
-        // Приоритет: ссылка из поля ввода, если пусто - вставленная картинка
         let finalImg = imgUrl || Core.currentImgBase64;
-        
         let q = { v, t: this.t, i: finalImg };
         
         if(this.t === 'multi') {
@@ -279,7 +306,6 @@ const Ed = {
         
         Core.qs.push(q);
         
-        // Очистка полей для следующего вопроса
         document.getElementById('q-val').value = '';
         document.getElementById('q-img-url').value = '';
         Core.currentImgBase64 = null;
@@ -305,7 +331,6 @@ const Quiz = {
         const q = this.src.q[this.idx];
         document.getElementById('qz-t').innerText = q.v;
         
-        // Отрисовка картинки, если она есть
         document.getElementById('qz-img').innerHTML = q.i ? `<img src="${q.i}" style="width:100%; max-height:250px; object-fit:contain; border-radius:4px; margin-bottom:15px; border: 1px solid var(--border);">` : '';
         
         const o = document.getElementById('qz-o'); o.innerHTML = '';
@@ -365,10 +390,17 @@ document.getElementById('vol').oninput = (e) => Sound.el.volume = e.target.value
 
 const UI = { go(id) { document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden')); document.getElementById('scr-'+id).classList.remove('hidden'); } };
 
-for(let i=0; i<30; i++) {
-    const d = document.createElement('div'); d.className = 'drop';
-    d.style.left = Math.random()*100+'vw'; d.style.animationDuration = (Math.random()*0.5+0.5)+'s';
-    d.style.animationDelay = Math.random()*2+'s'; document.getElementById('rain').appendChild(d);
+// Генерация падающих вопросов
+for(let i=0; i<35; i++) {
+    const d = document.createElement('div'); 
+    d.className = 'drop';
+    d.innerText = '?';
+    d.style.left = Math.random() * 100 + 'vw'; 
+    d.style.animationDuration = (Math.random() * 3 + 2) + 's'; // Скорость падения
+    d.style.animationDelay = Math.random() * 5 + 's';
+    d.style.fontSize = (Math.random() * 20 + 15) + 'px'; // Размер знаков вопроса
+    d.style.opacity = Math.random() * 0.4 + 0.1; // Прозрачность
+    document.getElementById('rain').appendChild(d);
 }
 
 window.onload = () => { const p = new URLSearchParams(window.location.search); if(p.has('d')) Quiz.start(p.get('d')); };
