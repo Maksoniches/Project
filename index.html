@@ -2,65 +2,291 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Конструктор тестов</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Maker Pro</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+        :root {
+            --primary: #6366f1;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f1f5f9 100%);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            transition: all 0.3s ease;
+        }
+
+        h1 { text-align: center; color: var(--primary); }
+
         .hidden { display: none; }
-        input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
-        button { padding: 10px 20px; cursor: pointer; background: #2ea44f; color: white; border: none; border-radius: 5px; margin-top: 10px; }
-        .question-block { border-bottom: 1px solid #ccc; padding-bottom: 10px; margin-bottom: 10px; }
+
+        /* Кнопки */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            margin-top: 10px;
+            transition: opacity 0.2s;
+        }
+        .btn:hover { opacity: 0.9; }
+        .btn-add { background: #10b981; margin-bottom: 20px; }
+        .btn-next { background: #6366f1; }
+        .btn-share { background: #f59e0b; }
+
+        /* Поля ввода */
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin: 8px 0;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            box-sizing: border-box;
+            outline: none;
+        }
+        input[type="text"]:focus { border-color: var(--primary); }
+
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .checkbox-custom { width: 20px; height: 20px; cursor: pointer; }
+
+        .step-info { font-size: 0.9rem; color: #64748b; margin-bottom: 10px; }
+        
+        .share-link {
+            word-break: break-all;
+            background: #f1f5f9;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            border: 1px dashed var(--primary);
+        }
     </style>
 </head>
 <body>
 
-    <div id="creator">
-        <h2>Создание теста</h2>
-        <input type="text" id="qInput" placeholder="Введите вопрос">
-        <input type="text" id="aInput" placeholder="Варианты через запятую (например: Да, Нет, Не знаю)">
-        <button onclick="addQuestion()">Добавить вопрос</button>
-        <hr>
-        <div id="preview"></div>
-        <button id="startBtn" class="hidden" onclick="startTest()">Начать тест</button>
+<div class="container" id="app">
+    <!-- Приветственный экран -->
+    <div id="screen-welcome">
+        <h1>Quiz Maker</h1>
+        <p style="text-align: center;">Создайте свой тест за пару минут и поделитесь им с друзьями.</p>
+        <button class="btn" onclick="showScreen('editor')">Создать тест</button>
     </div>
 
-    <div id="quiz" class="hidden">
-        <h2>Прохождение теста</h2>
-        <div id="quizContent"></div>
-        <button onclick="location.reload()">Создать новый тест</button>
+    <!-- Редактор вопросов -->
+    <div id="screen-editor" class="hidden">
+        <div class="step-info" id="q-counter">Вопрос №1</div>
+        <input type="text" id="q-text" placeholder="Введите текст вопроса">
+        
+        <div id="options-container">
+            <!-- Сюда добавляются варианты -->
+        </div>
+        
+        <button class="btn btn-add" onclick="addOptionField()">+ Добавить вариант</button>
+        <button class="btn btn-next" onclick="saveQuestion()">Следующий вопрос</button>
+        <button class="btn btn-share" style="margin-top: 30px;" onclick="finishQuiz()">Создать и получить ссылку</button>
     </div>
 
-    <script>
-        let questions = [];
+    <!-- Экран ссылки -->
+    <div id="screen-link" class="hidden">
+        <h1>Готово!</h1>
+        <p>Скопируйте ссылку и отправьте другу:</p>
+        <div class="share-link" id="link-output"></div>
+        <button class="btn" onclick="copyLink()">Копировать ссылку</button>
+        <button class="btn btn-add" id="open-test-btn">Открыть мой тест</button>
+    </div>
 
-        function addQuestion() {
-            const q = document.getElementById('qInput').value;
-            const a = document.getElementById('aInput').value.split(',');
+    <!-- Экран прохождения теста -->
+    <div id="screen-quiz" class="hidden">
+        <h2 id="display-q-text"></h2>
+        <div id="display-options"></div>
+        <button class="btn" id="next-q-btn" onclick="nextQuestion()">Дальше</button>
+    </div>
 
-            if (q && a.length > 1) {
-                questions.push({ question: q, answers: a });
-                document.getElementById('preview').innerHTML += `<div class="question-block"><b>${q}</b> (${a.join(', ')})</div>`;
-                document.getElementById('qInput').value = '';
-                document.getElementById('aInput').value = '';
-                document.getElementById('startBtn').classList.remove('hidden');
-            } else {
-                alert("Введите вопрос и хотя бы два варианта ответа через запятую");
+    <!-- Результат -->
+    <div id="screen-result" class="hidden">
+        <h1>Результат</h1>
+        <p id="result-text" style="font-size: 1.5rem; text-align: center;"></p>
+        <button class="btn" onclick="location.href=location.pathname">Создать свой тест</button>
+    </div>
+</div>
+
+<script>
+    let questions = [];
+    let currentQuizData = [];
+    let currentStep = 0;
+    let score = 0;
+
+    // Инициализация при загрузке: если в URL есть данные, запускаем тест
+    window.onload = () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const data = urlParams.get('data');
+        if (data) {
+            try {
+                currentQuizData = JSON.parse(decodeURIComponent(escape(atob(data))));
+                startQuiz();
+            } catch (e) {
+                console.error("Ошибка загрузки теста", e);
             }
         }
+    };
 
-        function startTest() {
-            document.getElementById('creator').classList.add('hidden');
-            document.getElementById('quiz').classList.remove('hidden');
-            
-            const container = document.getElementById('quizContent');
-            questions.forEach((item, index) => {
-                let html = `<div class="question-block"><p>${index + 1}. ${item.question}</p>`;
-                item.answers.forEach(ans => {
-                    html += `<label><input type="radio" name="q${index}"> ${ans.trim()}</label><br>`;
-                });
-                html += `</div>`;
-                container.innerHTML += html;
+    function showScreen(id) {
+        document.querySelectorAll('#app > div').forEach(div => div.classList.add('hidden'));
+        document.getElementById('screen-' + id).classList.remove('hidden');
+        if(id === 'editor' && document.getElementById('options-container').children.length === 0) {
+            addOptionField();
+            addOptionField();
+        }
+    }
+
+    // --- Логика редактора ---
+    function addOptionField() {
+        const container = document.getElementById('options-container');
+        const div = document.createElement('div');
+        div.className = 'option-row';
+        div.innerHTML = `
+            <input type="checkbox" class="checkbox-custom" title="Отметьте, если это правильный ответ">
+            <input type="text" class="opt-text" placeholder="Вариант ответа">
+        `;
+        container.appendChild(div);
+    }
+
+    function saveQuestion() {
+        const qText = document.getElementById('q-text').value;
+        const rows = document.querySelectorAll('.option-row');
+        let opts = [];
+        
+        rows.forEach(row => {
+            const text = row.querySelector('.opt-text').value;
+            const isCorrect = row.querySelector('.checkbox-custom').checked;
+            if(text) opts.push({ text, isCorrect });
+        });
+
+        if (!qText || opts.length < 2) {
+            alert("Введите вопрос и минимум 2 варианта!");
+            return;
+        }
+
+        questions.push({ qText, opts });
+        
+        // Очистка для следующего вопроса
+        document.getElementById('q-text').value = '';
+        document.getElementById('options-container').innerHTML = '';
+        addOptionField(); addOptionField();
+        document.getElementById('q-counter').innerText = `Вопрос №${questions.length + 1}`;
+    }
+
+    function finishQuiz() {
+        // Сохраняем текущий вопрос, если он заполнен
+        if (document.getElementById('q-text').value) {
+            saveQuestion();
+        }
+        
+        if (questions.length === 0) return;
+
+        const json = JSON.stringify(questions);
+        const base64 = btoa(unescape(encodeURIComponent(json)));
+        const link = window.location.origin + window.location.pathname + '?data=' + base64;
+        
+        document.getElementById('link-output').innerText = link;
+        document.getElementById('open-test-btn').onclick = () => window.location.href = link;
+        showScreen('link');
+    }
+
+    function copyLink() {
+        const text = document.getElementById('link-output').innerText;
+        navigator.clipboard.writeText(text).then(() => alert("Ссылка скопирована!"));
+    }
+
+    // --- Логика прохождения ---
+    function startQuiz() {
+        showScreen('quiz');
+        renderStep();
+    }
+
+    function renderStep() {
+        const step = currentQuizData[currentStep];
+        document.getElementById('display-q-text').innerText = step.qText;
+        const container = document.getElementById('display-options');
+        container.innerHTML = '';
+
+        step.opts.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'btn';
+            btn.style.background = '#e2e8f0';
+            btn.style.color = '#1e293b';
+            btn.style.textAlign = 'left';
+            btn.innerText = opt.text;
+            btn.onclick = () => checkAnswer(index, btn);
+            container.appendChild(btn);
+        });
+    }
+
+    function checkAnswer(index, btn) {
+        const step = currentQuizData[currentStep];
+        const buttons = document.getElementById('display-options').querySelectorAll('button');
+        
+        // Блокируем нажатия
+        buttons.forEach(b => b.disabled = true);
+
+        if (step.opts[index].isCorrect) {
+            btn.style.background = '#10b981';
+            btn.style.color = 'white';
+            score++;
+        } else {
+            btn.style.background = '#ef4444';
+            btn.style.color = 'white';
+            // Подсветить правильный
+            step.opts.forEach((o, i) => {
+                if(o.isCorrect) {
+                    buttons[i].style.background = '#10b981';
+                    buttons[i].style.color = 'white';
+                }
             });
         }
-    </script>
+    }
+
+    function nextQuestion() {
+        currentStep++;
+        if (currentStep < currentQuizData.length) {
+            renderStep();
+        } else {
+            showResult();
+        }
+    }
+
+    function showResult() {
+        showScreen('result');
+        document.getElementById('result-text').innerText = `${score} из ${currentQuizData.length}`;
+    }
+</script>
+
 </body>
 </html>
