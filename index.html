@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quiz Maker</title>
+    <title>Quiz Maker Pro</title>
     <style>
         :root {
             --bg-black: #050505;
@@ -16,141 +16,160 @@
         body {
             font-family: sans-serif;
             background-color: var(--bg-black);
-            background-image: radial-gradient(circle, #1a0000 0%, #050505 100%);
             color: var(--text-gray);
             margin: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            overflow: hidden; /* Чтобы дождь не создавал прокрутку */
         }
+
+        /* Эффект дождя */
+        .rain { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+        .drop { position: absolute; background: rgba(255, 255, 255, 0.1); width: 1px; height: 50px; top: -100px; animation: fall linear infinite; }
+        @keyframes fall { to { transform: translateY(120vh); } }
 
         .container {
-            background: rgba(10, 10, 10, 0.95);
-            padding: 2.5rem;
-            border: 2px solid var(--blood-red);
+            background: rgba(10, 10, 10, 0.9);
+            padding: 2rem;
+            border: 1px solid var(--blood-red);
             border-radius: 10px;
-            box-shadow: 0 0 30px rgba(139, 0, 0, 0.4);
+            box-shadow: 0 0 30px rgba(139, 0, 0, 0.3);
             width: 90%;
             max-width: 600px;
+            position: relative;
+            z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
         }
 
-        h1, h2 { text-align: center; color: var(--bright-red); margin-bottom: 20px; }
         .hidden { display: none; }
+        h1, h2 { text-align: center; color: var(--bright-red); margin-bottom: 15px; }
 
         .btn {
             background: var(--blood-red);
             color: white;
             border: 1px solid var(--bright-red);
-            padding: 14px;
+            padding: 12px;
             cursor: pointer;
-            font-size: 1rem;
             width: 100%;
             margin-top: 10px;
-            border-radius: 5px;
+            border-radius: 4px;
             transition: 0.3s;
         }
         .btn:hover { background: var(--bright-red); }
+        .btn-secondary { background: #222; border-color: #444; }
 
-        input[type="text"] {
+        input, select {
             width: 100%;
-            padding: 12px;
-            margin: 10px 0;
+            padding: 10px;
+            margin: 8px 0;
             background: #111;
             border: 1px solid var(--blood-red);
             color: white;
-            border-radius: 5px;
-            outline: none;
+            border-radius: 4px;
             box-sizing: border-box;
         }
 
-        .option-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-            padding: 8px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 5px;
-        }
+        .option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .checkbox-custom { accent-color: var(--bright-red); width: 20px; height: 20px; }
 
-        .checkbox-custom { accent-color: var(--bright-red); width: 22px; height: 22px; cursor: pointer; }
-
-        /* Итоговый экран */
-        .result-item { margin-bottom: 15px; padding: 15px; border-bottom: 1px solid #222; }
-        .text-correct { color: var(--success-green); }
-        .text-wrong { color: var(--bright-red); }
-        .percentage { font-size: 3.5rem; text-align: center; color: var(--bright-red); margin: 20px 0; font-weight: bold; }
+        /* Стили для медиа */
+        .img-preview { max-width: 100%; border-radius: 5px; margin-top: 10px; border: 1px solid #333; }
         
-        #link-output { 
-            word-break: break-all; 
-            background: #000; 
-            padding: 15px; 
-            border: 1px dashed var(--blood-red); 
-            color: var(--bright-red);
-            margin: 15px 0;
-            font-family: monospace;
+        /* Плеер */
+        #audio-controls {
+            position: fixed;
+            bottom: 15px; right: 15px;
+            background: rgba(0,0,0,0.8);
+            padding: 10px; border: 1px solid var(--blood-red);
+            border-radius: 5px; z-index: 100; font-size: 12px;
         }
 
-        /* Мини-плеер */
-        #audio-player {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            border: 1px solid var(--blood-red);
-            padding: 10px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            z-index: 100;
-        }
-        #audio-player span { font-size: 12px; color: var(--bright-red); }
-        #volume-slider { cursor: pointer; accent-color: var(--bright-red); }
+        /* Таблица критериев */
+        .grade-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 14px; }
+        .grade-table th, .grade-table td { border: 1px solid #333; padding: 8px; text-align: center; }
+        .grade-table input { margin: 0; padding: 5px; text-align: center; width: 50px; }
+
+        .q-type-selector { display: flex; gap: 5px; margin-bottom: 10px; }
+        .q-type-selector button { flex: 1; font-size: 12px; padding: 5px; }
     </style>
 </head>
 <body>
 
-<div id="audio-player">
-    <span>SH3 OST</span>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.2">
+<div class="rain" id="rain-container"></div>
+
+<div id="audio-controls">
+    <span>Vol: </span>
+    <input type="range" id="vol-slider" min="0" max="1" step="0.05" value="0.2" style="width: 80px;">
 </div>
 
 <div class="container" id="app">
-    <audio id="bg-music" loop>
-        <source src="song.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="bg-music" loop><source src="song.mp3" type="audio/mpeg"></audio>
 
     <div id="screen-welcome">
-        <h1>Конструктор тестов</h1>
+        <h1>Quiz Studio</h1>
         <button class="btn" onclick="startApp()">Начать</button>
     </div>
 
     <div id="screen-editor" class="hidden">
         <h2 id="q-counter">Вопрос №1</h2>
-        <input type="text" id="q-text" placeholder="Введите вопрос">
+        
+        <div class="q-type-selector">
+            <button class="btn btn-secondary" id="type-multi" onclick="setQType('multi')">Выбор ответа</button>
+            <button class="btn btn-secondary" id="type-text" onclick="setQType('text')">Развернутый ответ</button>
+        </div>
+
+        <input type="text" id="q-text" placeholder="Текст вопроса...">
+        
+        <div style="margin: 10px 0;">
+            <label style="font-size: 12px; color: #888;">Добавить картинку:</label>
+            <input type="file" id="q-image" accept="image/*" onchange="previewImage(this)">
+            <img id="preview-img-tag" class="img-preview hidden">
+        </div>
+
         <div id="options-container"></div>
-        <button class="btn" onclick="addOptionField()">+ Вариант ответа</button>
+        
+        <button class="btn btn-secondary" id="btn-add-opt" onclick="addOptionField()">+ Вариант</button>
         <button class="btn" onclick="saveQuestion()">Далее</button>
-        <button class="btn" style="margin-top: 30px; background: #333;" onclick="finishQuiz()">Создать ссылку</button>
+        
+        <div style="margin-top: 25px; border-top: 1px solid #333; padding-top: 15px;">
+            <p style="font-size: 13px; margin: 0 0 10px 0;">Критерии оценок (% правильных ответов):</p>
+            <table class="grade-table">
+                <tr><th>Оценка 5</th><th>Оценка 4</th><th>Оценка 3</th><th>Оценка 2</th></tr>
+                <tr>
+                    <td><input type="number" id="g5" value="90"></td>
+                    <td><input type="number" id="g4" value="70"></td>
+                    <td><input type="number" id="g3" value="50"></td>
+                    <td><input type="number" id="g2" value="0"></td>
+                </tr>
+            </table>
+            <button class="btn" style="background: #333;" onclick="finishQuiz()">Создать ссылку</button>
+        </div>
     </div>
 
     <div id="screen-link" class="hidden">
         <h2>Ссылка создана</h2>
-        <div id="link-output"></div>
-        <button class="btn" onclick="copyLink()">Копировать ссылку</button>
-        <button class="btn" style="background: #111;" onclick="location.href=location.pathname">На главную</button>
+        <div id="link-output" style="word-break: break-all; background: #000; padding: 10px; border: 1px dashed var(--blood-red); font-size: 12px; color: var(--bright-red);"></div>
+        <button class="btn" onclick="copyLink()">Копировать</button>
+        <button class="btn btn-secondary" onclick="location.href=location.pathname">Создать еще один</button>
     </div>
 
     <div id="screen-quiz" class="hidden">
+        <div id="quiz-media-container"></div>
         <h2 id="display-q-text"></h2>
         <div id="display-options"></div>
+        <div id="text-answer-container" class="hidden">
+            <input type="text" id="user-text-input" placeholder="Введите ваш ответ...">
+            <button class="btn" onclick="submitTextAnswer()">Отправить</button>
+        </div>
     </div>
 
     <div id="screen-result" class="hidden">
-        <h1>Итоги</h1>
-        <div class="percentage" id="perc-output">0%</div>
+        <h1>Результат</h1>
+        <div class="percentage" id="perc-output" style="font-size: 3rem; text-align: center; color: var(--bright-red); margin: 10px 0;">0%</div>
+        <h2 id="final-grade" style="margin-top: 0;"></h2>
         <div id="error-list"></div>
         <button class="btn" onclick="location.href=location.pathname">Создать свой тест</button>
     </div>
@@ -158,168 +177,209 @@
 
 <script>
     let questions = [];
-    let currentQuizData = [];
+    let currentQuizData = null;
     let userAnswers = [];
     let currentStep = 0;
-    
+    let currentQType = 'multi';
+    let currentBase64Image = null;
+
     const music = document.getElementById('bg-music');
-    const volumeSlider = document.getElementById('volume-slider');
-
-    // Настройка звука
     music.volume = 0.2;
-    volumeSlider.addEventListener('input', (e) => {
-        music.volume = e.target.value;
-    });
 
-    // Корректное кодирование кириллицы для URL
-    function encodeData(obj) {
-        return btoa(encodeURIComponent(JSON.stringify(obj)).replace(/%([0-9A-F]{2})/g, (match, p1) => {
-            return String.fromCharCode('0x' + p1);
-        }));
+    // Инициализация дождя
+    const rainContainer = document.getElementById('rain-container');
+    for (let i = 0; i < 50; i++) {
+        const drop = document.createElement('div');
+        drop.className = 'drop';
+        drop.style.left = Math.random() * 100 + 'vw';
+        drop.style.animationDuration = (Math.random() * 0.5 + 0.5) + 's';
+        drop.style.animationDelay = Math.random() * 2 + 's';
+        rainContainer.appendChild(drop);
     }
 
-    function decodeData(str) {
-        return JSON.parse(decodeURIComponent(atob(str).split('').map((c) => {
-            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join('')));
-    }
+    document.getElementById('vol-slider').oninput = (e) => music.volume = e.target.value;
 
-    window.onload = () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('data')) {
-            document.getElementById('screen-welcome').classList.add('hidden');
-            try {
-                currentQuizData = decodeData(urlParams.get('data'));
-                startQuiz();
-            } catch (e) {
-                alert("Ошибка чтения данных. Ссылка повреждена.");
-                console.error(e);
-            }
+    function setQType(type) {
+        currentQType = type;
+        document.getElementById('type-multi').style.background = type === 'multi' ? 'var(--blood-red)' : '#222';
+        document.getElementById('type-text').style.background = type === 'text' ? 'var(--blood-red)' : '#222';
+        document.getElementById('options-container').innerHTML = '';
+        document.getElementById('btn-add-opt').style.display = type === 'multi' ? 'block' : 'none';
+        if(type === 'multi') { addOptionField(); addOptionField(); }
+        else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'correct-text-answer';
+            input.placeholder = 'Введите правильный ответ для проверки';
+            document.getElementById('options-container').appendChild(input);
         }
-    };
-
-    function startApp() {
-        music.play().catch(() => {});
-        showScreen('editor');
     }
 
-    function showScreen(id) {
-        document.querySelectorAll('#app > div').forEach(div => div.classList.add('hidden'));
-        document.getElementById('screen-' + id).classList.remove('hidden');
-        if(id === 'editor' && !document.getElementById('options-container').children.length) {
-            addOptionField(); addOptionField();
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentBase64Image = e.target.result;
+                const img = document.getElementById('preview-img-tag');
+                img.src = currentBase64Image;
+                img.classList.remove('hidden');
+            };
+            reader.readAsDataURL(input.files[0]);
         }
     }
 
     function addOptionField() {
         const div = document.createElement('div');
         div.className = 'option-row';
-        div.innerHTML = `<input type="checkbox" class="checkbox-custom"><input type="text" class="opt-text" placeholder="Вариант ответа">`;
+        div.innerHTML = `<input type="checkbox" class="checkbox-custom"><input type="text" class="opt-text" placeholder="Вариант...">`;
         document.getElementById('options-container').appendChild(div);
     }
 
     function saveQuestion() {
         const qText = document.getElementById('q-text').value;
-        const rows = document.querySelectorAll('.option-row');
-        let opts = [];
-        let hasCorrect = false;
+        if (!qText) return alert("Введите текст вопроса");
 
-        rows.forEach(row => {
-            const text = row.querySelector('.opt-text').value;
-            const isCorrect = row.querySelector('.checkbox-custom').checked;
-            if(text) {
-                opts.push({ text, isCorrect });
-                if(isCorrect) hasCorrect = true;
-            }
-        });
+        let qData = { qText, type: currentQType, img: currentBase64Image };
 
-        if (!qText || opts.length < 2) return alert("Введите вопрос и минимум 2 ответа");
-        if (!hasCorrect) return alert("Выберите правильный ответ!");
+        if (currentQType === 'multi') {
+            const rows = document.querySelectorAll('.option-row');
+            let opts = [];
+            let hasCorrect = false;
+            rows.forEach(row => {
+                const text = row.querySelector('.opt-text').value;
+                const isCorrect = row.querySelector('.checkbox-custom').checked;
+                if(text) { opts.push({ text, isCorrect }); if(isCorrect) hasCorrect = true; }
+            });
+            if (opts.length < 2 || !hasCorrect) return alert("Нужно минимум 2 ответа и 1 галочка");
+            qData.opts = opts;
+        } else {
+            const correctText = document.getElementById('correct-text-answer').value;
+            if (!correctText) return alert("Введите правильный ответ для проверки");
+            qData.correctText = correctText;
+        }
 
-        questions.push({ qText, opts });
+        questions.push(qData);
+        // Reset fields
         document.getElementById('q-text').value = '';
-        document.getElementById('options-container').innerHTML = '';
-        addOptionField(); addOptionField();
+        document.getElementById('q-image').value = '';
+        document.getElementById('preview-img-tag').classList.add('hidden');
+        currentBase64Image = null;
+        setQType(currentQType);
         document.getElementById('q-counter').innerText = `Вопрос №${questions.length + 1}`;
     }
 
     function finishQuiz() {
-        if (document.getElementById('q-text').value) {
-            const rows = document.querySelectorAll('.option-row');
-            let hasCorrect = false;
-            rows.forEach(row => { if(row.querySelector('.checkbox-custom').checked) hasCorrect = true; });
-            if (!hasCorrect) return alert("В последнем вопросе не выбран правильный ответ!");
-            saveQuestion();
-        }
-        
-        if (!questions.length) return alert("Добавьте хотя бы один вопрос");
+        if (document.getElementById('q-text').value) saveQuestion();
+        if (questions.length === 0) return alert("Нет вопросов");
 
-        const link = window.location.origin + window.location.pathname + '?data=' + encodeData(questions);
-        document.getElementById('link-output').innerText = link;
+        const criteria = {
+            5: document.getElementById('g5').value,
+            4: document.getElementById('g4').value,
+            3: document.getElementById('g3').value,
+            2: document.getElementById('g2').value
+        };
+
+        const data = { questions, criteria };
+        const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+        document.getElementById('link-output').innerText = window.location.origin + window.location.pathname + '?data=' + base64;
         showScreen('link');
     }
 
-    function startQuiz() {
-        music.play().catch(() => {});
-        showScreen('quiz');
-        renderStep();
+    function startApp() { music.play().catch(()=>{}); showScreen('editor'); setQType('multi'); }
+
+    function showScreen(id) {
+        document.querySelectorAll('#app > div').forEach(div => div.classList.add('hidden'));
+        document.getElementById('screen-' + id).classList.remove('hidden');
     }
+
+    window.onload = () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('data')) {
+            try {
+                currentQuizData = JSON.parse(decodeURIComponent(escape(atob(params.get('data')))));
+                document.getElementById('screen-welcome').classList.add('hidden');
+                startQuiz();
+            } catch(e) { alert("Ошибка данных"); }
+        }
+    };
+
+    function startQuiz() { music.play().catch(()=>{}); showScreen('quiz'); renderStep(); }
 
     function renderStep() {
-        const step = currentQuizData[currentStep];
+        const step = currentQuizData.questions[currentStep];
         document.getElementById('display-q-text').innerText = step.qText;
-        const container = document.getElementById('display-options');
-        container.innerHTML = '';
+        
+        const mediaContainer = document.getElementById('quiz-media-container');
+        mediaContainer.innerHTML = step.img ? `<img src="${step.img}" class="img-preview">` : '';
 
-        step.opts.forEach((opt, index) => {
-            const btn = document.createElement('button');
-            btn.className = 'btn';
-            btn.style.background = '#111';
-            btn.innerText = opt.text;
-            btn.onclick = () => handleAnswer(index, btn);
-            container.appendChild(btn);
-        });
+        const optContainer = document.getElementById('display-options');
+        const textContainer = document.getElementById('text-answer-container');
+        optContainer.innerHTML = '';
+        textContainer.classList.add('hidden');
+
+        if (step.type === 'multi') {
+            step.opts.forEach((o, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-secondary';
+                btn.innerText = o.text;
+                btn.onclick = () => checkMulti(i, btn);
+                optContainer.appendChild(btn);
+            });
+        } else {
+            textContainer.classList.remove('hidden');
+            document.getElementById('user-text-input').value = '';
+        }
     }
 
-    function handleAnswer(idx, btn) {
-        const step = currentQuizData[currentStep];
-        const buttons = document.getElementById('display-options').querySelectorAll('button');
-        buttons.forEach(b => b.disabled = true);
-
+    function checkMulti(idx, btn) {
+        const step = currentQuizData.questions[currentStep];
         const isCorrect = step.opts[idx].isCorrect;
-        userAnswers.push({
-            question: step.qText,
-            userChoice: step.opts[idx].text,
-            correctChoice: step.opts.find(o => o.isCorrect).text,
-            wasRight: isCorrect
-        });
-
-        btn.style.backgroundColor = isCorrect ? '#22c55e' : '#ff0000';
-
-        setTimeout(() => {
-            currentStep++;
-            if (currentStep < currentQuizData.length) renderStep();
-            else showFinalResult();
-        }, 800);
+        recordAnswer(isCorrect, step.opts[idx].text, step.opts.find(o=>o.isCorrect).text);
+        btn.style.background = isCorrect ? 'var(--success-green)' : 'var(--bright-red)';
+        setTimeout(nextStep, 800);
     }
 
-    function showFinalResult() {
+    function submitTextAnswer() {
+        const step = currentQuizData.questions[currentStep];
+        const userVal = document.getElementById('user-text-input').value.trim().toLowerCase();
+        const correctVal = step.correctText.trim().toLowerCase();
+        recordAnswer(userVal === correctVal, userVal, step.correctText);
+        nextStep();
+    }
+
+    function recordAnswer(isRight, userText, correctText) {
+        userAnswers.push({ q: currentQuizData.questions[currentStep].qText, isRight, userText, correctText });
+    }
+
+    function nextStep() {
+        currentStep++;
+        if (currentStep < currentQuizData.questions.length) renderStep();
+        else showFinal();
+    }
+
+    function showFinal() {
         showScreen('result');
-        const correctCount = userAnswers.filter(a => a.wasRight).length;
-        const percent = Math.round((correctCount / userAnswers.length) * 100);
-        document.getElementById('perc-output').innerText = percent + '%';
+        const correct = userAnswers.filter(a => a.isRight).length;
+        const perc = Math.round((correct / userAnswers.length) * 100);
+        document.getElementById('perc-output').innerText = perc + '%';
+        
+        let grade = 2;
+        const c = currentQuizData.criteria;
+        if (perc >= c[5]) grade = 5;
+        else if (perc >= c[4]) grade = 4;
+        else if (perc >= c[3]) grade = 3;
+        
+        document.getElementById('final-grade').innerText = "Оценка: " + grade;
+        document.getElementById('final-grade').style.color = grade > 2 ? 'var(--success-green)' : 'var(--bright-red)';
 
         const list = document.getElementById('error-list');
         list.innerHTML = '<h3>Детали:</h3>';
         userAnswers.forEach(a => {
-            list.innerHTML += `
-                <div class="result-item">
-                    <div><b>Вопрос:</b> ${a.question}</div>
-                    <div class="${a.wasRight ? 'text-correct' : 'text-wrong'}">
-                        <b>Ваш ответ:</b> ${a.userChoice}
-                    </div>
-                    ${!a.wasRight ? `<div class="text-correct"><b>Верно:</b> ${a.correctChoice}</div>` : ''}
-                </div>`;
+            list.innerHTML += `<div style="border-bottom: 1px solid #333; padding: 10px;">
+                <p><b>В:</b> ${a.q}</p>
+                <p style="color:${a.isRight?'var(--success-green)':'var(--bright-red)'}"><b>О:</b> ${a.userText}</p>
+                ${!a.isRight ? `<p style="color:var(--success-green)"><b>Верно:</b> ${a.correctText}</p>`:''}
+            </div>`;
         });
     }
 
@@ -328,6 +388,5 @@
         alert("Скопировано!");
     }
 </script>
-
 </body>
 </html>
