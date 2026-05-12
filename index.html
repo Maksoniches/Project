@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quiet Quiz Studio</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
     <style>
@@ -25,30 +25,30 @@
         }
         
         .author-tag {
-            position: fixed; top: 20px; right: 20px; font-size: 10px;
-            color: rgba(255, 255, 255, 0.2); z-index: 100; letter-spacing: 1px;
+            position: fixed; top: 20px; right: 20px; font-size: 12px;
+            color: rgba(255, 255, 255, 0.3); z-index: 100; letter-spacing: 1px;
             font-weight: 300; pointer-events: none;
         }
 
+        /* Обновленные падающие вопросы */
         .rain { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
         .drop { 
             position: absolute; 
             top: -60px; 
-            color: #fff;
+            color: #fff; /* Чисто белый */
             font-family: 'Georgia', serif;
             animation: fall linear infinite; 
             user-select: none;
-            text-shadow: 0 0 5px rgba(255,255,255,0.2);
+            text-shadow: 0 0 5px rgba(255,255,255,0.2); /* Легкое свечение */
         }
         @keyframes fall { to { transform: translateY(115vh) rotate(25deg); } }
 
         .container {
             background: rgba(22, 22, 26, 0.85); backdrop-filter: blur(12px);
-            padding: 25px; border-radius: 12px; border: 1px solid var(--border);
-            width: 92%; max-width: 500px; position: relative; z-index: 10; 
+            padding: 30px; border-radius: 12px; border: 1px solid var(--border);
+            width: 90%; max-width: 500px; position: relative; z-index: 10; 
             box-shadow: 0 15px 45px rgba(0,0,0,0.8);
             max-height: 85vh; overflow-y: auto;
-            box-sizing: border-box;
         }
         
         h1, h2 { color: #fff; font-weight: 300; text-align: center; margin-bottom: 20px; letter-spacing: 1px; }
@@ -56,7 +56,6 @@
         .btn {
             background: var(--accent); color: #fff; border: none; padding: 12px; cursor: pointer;
             width: 100%; border-radius: 6px; transition: 0.2s; margin-top: 10px; font-size: 0.9rem;
-            box-sizing: border-box;
         }
         .btn:hover { filter: brightness(1.2); transform: scale(1.01); }
         .btn-sub { background: rgba(42, 42, 46, 0.8); color: #ccc; margin-top: 5px; }
@@ -75,24 +74,11 @@
         input[type="range"] { width: 60px; accent-color: var(--accent); margin: 0; cursor: pointer; }
         
         .grade-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
-        .grade-item { font-size: 10px; text-align: center; border: 1px solid var(--border); padding: 5px; border-radius: 6px; background: rgba(0,0,0,0.2); }
-        .grade-item input { padding: 4px; margin: 4px 0 0 0; text-align: center; font-size: 11px; }
+        .grade-item { font-size: 11px; text-align: center; border: 1px solid var(--border); padding: 5px; border-radius: 6px; background: rgba(0,0,0,0.2); }
         
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
-
-        /* --- МОБИЛЬНАЯ АДАПТАЦИЯ --- */
-        @media (max-width: 480px) {
-            .container { padding: 18px; max-height: 90vh; }
-            h1 { font-size: 1.4rem; }
-            h2 { font-size: 1.1rem; }
-            .grade-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-            .author-tag { top: 10px; right: 10px; font-size: 9px; }
-            #player { bottom: 15px; right: 15px; padding: 12px; }
-            input[type="range"] { width: 80px; }
-            .btn { padding: 14px; }
-        }
     </style>
 </head>
 <body>
@@ -128,7 +114,7 @@
         <div style="background: rgba(13, 13, 15, 0.6); border: 1px dashed var(--border); padding: 15px; border-radius: 8px; margin: 10px 0; text-align: center;">
             <img id="q-img-preview" class="hidden" style="max-width: 100%; max-height: 150px; border-radius: 6px; margin-bottom: 12px; border: 1px solid var(--accent); object-fit: contain;">
             <p id="p-hint" style="font-size: 11px; color: #666; margin: 0;">Нажми <b>Ctrl+V</b> для вставки фото</p>
-            <input type="text" id="q-img-url" placeholder="Ссылка на картинку" style="margin-top: 10px; padding: 8px; font-size: 11px; background: rgba(0,0,0,0.3);">
+            <input type="text" id="q-img-url" placeholder="Или вставь прямую ссылку на картинку" style="margin-top: 10px; padding: 8px; font-size: 11px; background: rgba(0,0,0,0.3);">
         </div>
 
         <div id="opts"></div>
@@ -149,7 +135,7 @@
     <div id="scr-link" class="hidden">
         <h2>Тест готов</h2>
         <div id="out" style="background: rgba(0,0,0,0.4); padding: 15px; border: 1px solid #333; font-size: 11px; word-break: break-all; color: #888; border-radius: 6px; max-height: 80px; overflow-y: auto;"></div>
-        <div id="link-warning" class="hidden" style="color: #eab308; font-size: 11px; text-align: center; margin: 10px 0;">⚠️ Ссылка длинная. Скачайте файл!</div>
+        <div id="link-warning" class="hidden" style="color: #eab308; font-size: 11px; text-align: center; margin: 10px 0;">⚠️ Ссылка длинная (из-за фото). Рекомендуем скачать файл!</div>
         <button class="btn" onclick="Core.copy()">Копировать ссылку</button>
         <button class="btn btn-sub" onclick="Core.downloadFile()">Скачать .sugar файл</button>
         <button class="btn btn-sub" style="margin-top: 20px; opacity: 0.5;" onclick="location.href=location.pathname">На главную</button>
@@ -209,7 +195,7 @@ const Core = {
                 const p = document.getElementById('q-img-preview');
                 p.src = this.currentImgBase64;
                 p.classList.remove('hidden');
-                document.getElementById('p-hint').innerText = "Фото добавлено!";
+                document.getElementById('p-hint').innerText = "Фото успешно добавлено!";
             };
         };
         reader.readAsDataURL(file);
@@ -224,7 +210,7 @@ const Core = {
         if(this.finalDataStr.length > 3000) document.getElementById('link-warning').classList.remove('hidden');
         UI.go('link');
     },
-    copy() { navigator.clipboard.writeText(document.getElementById('out').innerText); alert("Скопировано!"); },
+    copy() { navigator.clipboard.writeText(document.getElementById('out').innerText); alert("Ссылка скопирована!"); },
     downloadFile() {
         const blob = new Blob([this.finalDataStr], { type: "text/plain" });
         const a = document.createElement("a");
@@ -243,11 +229,11 @@ const Ed = {
         const w = document.getElementById('opts'); w.innerHTML = '';
         document.getElementById('add-o').style.display = t==='multi'?'block':'none';
         if(t==='multi') { this.addO(); this.addO(); }
-        else w.innerHTML = `<input type="text" id="ok-t" placeholder="Верное слово">`;
+        else w.innerHTML = `<input type="text" id="ok-t" placeholder="Верное слово для проверки">`;
     },
     addO() {
         const d = document.createElement('div'); d.className = 'opt-row';
-        d.innerHTML = `<input type="checkbox" style="width:20px; cursor:pointer;"><input type="text" class="ov" placeholder="Вариант">`;
+        d.innerHTML = `<input type="checkbox" style="width:20px; cursor:pointer;"><input type="text" class="ov" placeholder="Вариант ответа">`;
         document.getElementById('opts').appendChild(d);
     },
     save() {
@@ -260,7 +246,7 @@ const Ed = {
                 const txt = r.querySelector('.ov').value.trim();
                 if(txt) os.push({ txt, ok: r.querySelector('input').checked });
             });
-            if(os.length < 2 || !os.some(o => o.ok)) return alert("Минимум 2 варианта и правильный ответ");
+            if(os.length < 2 || !os.some(o => o.ok)) return alert("Нужно минимум 2 варианта и правильный ответ");
             q.os = os;
         } else {
             q.ok = document.getElementById('ok-t').value.trim(); 
@@ -338,17 +324,18 @@ document.getElementById('vol').oninput = (e) => Sound.el.volume = e.target.value
 
 const UI = { go(id) { document.querySelectorAll('#app > div').forEach(d => d.classList.add('hidden')); document.getElementById('scr-'+id).classList.remove('hidden'); } };
 
-// Оптимизированный дождь для мобильных (меньше частиц на узких экранах)
+// Генерация знаков вопроса (разные размеры и ярко-белый цвет)
 const rain = document.getElementById('rain');
-const count = window.innerWidth < 480 ? 20 : 40;
-for(let i=0; i<count; i++) {
+for(let i=0; i<40; i++) {
     const d = document.createElement('div'); 
     d.className = 'drop';
     d.innerText = '?';
     d.style.left = Math.random() * 100 + 'vw'; 
     d.style.animationDuration = (Math.random() * 3 + 2) + 's';
     d.style.animationDelay = Math.random() * 5 + 's';
+    // Случайный размер от 10px до 55px
     d.style.fontSize = (Math.random() * 45 + 10) + 'px'; 
+    // Разная прозрачность для эффекта глубины
     d.style.opacity = Math.random() * 0.4 + 0.1; 
     rain.appendChild(d);
 }
